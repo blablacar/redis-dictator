@@ -66,6 +66,8 @@ func(ze *Elector) Run(){
 					err := ze.NewElection()
 					if err != nil {
 						log.Warn(err)
+						// Reset role to force retake position
+						ze.Node.Role = "UNKNOWN"
 					}
 				}
 				time.Sleep(time.Millisecond * time.Duration(ze.CheckInterval))
@@ -113,8 +115,11 @@ func(ze *Elector) GetMasterNode()(*Node, error){
 func(ze *Elector) ElectionTakePosition()(string, error){
 	// Create Elections Path if doesn't not exists
 	err := ze.ZKCreatePath(ze.ZKPathElection)
-	if err != nil {
-		return "", err
+	if err != nil { // Maybe another node has created the path in the same time, test it before raise error
+		exists, _, _ := ze.ZKConnection.Exists(ze.ZKPathElection)
+		if !exists {
+			return "", err
+		}
 	}
 	path, err := ze.ZKCreateNode(ze.ZKPathElection + "/", "", zk.FlagEphemeral|zk.FlagSequence)
 	if err != nil {
@@ -129,8 +134,11 @@ func(ze *Elector) ElectionTakePosition()(string, error){
 
 func(ze *Elector) ElectionCleanMyToken()(error){
 	if ze.MyToken != "" {
-		err := ze.ZKConnection.Delete(ze.ZKPathElection + "/" + ze.MyToken, -1)
-		return err
+		exists, _, _ := ze.ZKConnection.Exists(ze.ZKPathElection + "/" + ze.MyToken)
+		if exists {
+			err := ze.ZKConnection.Delete(ze.ZKPathElection + "/" + ze.MyToken, -1)
+			return err
+		}
 	}
 	return nil
 }
@@ -181,8 +189,8 @@ func(ze *Elector) NewElection()(error){
         }else{
         	master, err := ze.GetMasterNode()
         	if err != nil {
-        		log.Warn("Unable to get the master infos...")
-        		return err
+				log.Warn("Unable to get the master infos...")
+				return errors.New("Election Failed!")
         	}
         	err = ze.Node.SetRole("SLAVE", master)
         	if err != nil {

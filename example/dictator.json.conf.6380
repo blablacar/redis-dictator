@@ -1,0 +1,12 @@
+{
+	"svc_name" : "default",
+	"elector" : {
+		"zk_hosts": ["127.0.0.1"],
+		"check_interval": 2000
+	},
+	"node" : {
+		"name" : "local",
+		"host" : "127.0.0.1",
+		"port" : 6380
+	} 
+}
