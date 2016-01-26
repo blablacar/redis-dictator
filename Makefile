@@ -11,7 +11,7 @@ dep-install:
 	$(GOMCMD) install
 
 build:
-	$(GOMCMD) build dictator
+	$(GOMCMD) build  -ldflags "-X main.BuildTime `date -u '+%Y-%m-%d_%H:%M:%S_UTC'` -X main.Version `cat VERSION.txt`-`git rev-parse HEAD`" dictator
 	mv dictator bin/.
 
 clean:
