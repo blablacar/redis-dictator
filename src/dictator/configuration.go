@@ -18,6 +18,7 @@ type NodeConfiguration struct {
 
 type DictatorConfiguration struct {
 	ServiceName string `json:"svc_name"`
+	LogLevel string `json:"log_level"`
 	Elector ElectorConfiguration `json:"elector"`
 	Node NodeConfiguration `json:"node"`
 }

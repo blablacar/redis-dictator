@@ -7,6 +7,12 @@ import (
 	"strings"
 )
 
+type ZKDebugLogger struct {}
+
+func(ZKDebugLogger) Printf(format string, a ...interface{}) {
+	log.Debug(format, a)
+}
+
 func(ze *Elector) ZKConnect() (zk.State, error) {
 	if ze.ZKConnection != nil {
 		state := ze.ZKConnection.State()
@@ -32,7 +38,12 @@ func(ze *Elector) ZKConnect() (zk.State, error) {
 		log.Info("Unable to Connect to ZooKeeper (",err,")")
 		return zk.StateDisconnected, err
 	}
+
 	ze.ZKConnection = conn
+
+	var zkLogger ZKDebugLogger
+	ze.ZKConnection.SetLogger(zkLogger)
+
 	state := ze.ZKConnection.State()
 
 	return state, nil

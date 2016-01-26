@@ -13,17 +13,17 @@ type Node struct {
 	Role string
 }
 
-func(re *Node) Initialize(Name string, Host string, Port int) (error) {
-	re.Name = Name
-	re.Host = Host
-	re.Port = Port
-	re.Role = "UNKNOWN"
+func(rn *Node) Initialize(Name string, Host string, Port int) (error) {
+	rn.Name = Name
+	rn.Host = Host
+	rn.Port = Port
+	rn.Role = "UNKNOWN"
 	return nil
 }
 
-func(re *Node) SlaveOf(host string, port string) (error) {
+func(rn *Node) SlaveOf(host string, port string) (error) {
 	 client := redis.NewClient(&redis.Options{
-        Addr:     re.Host + ":" + strconv.Itoa(re.Port),
+        Addr:     rn.Host + ":" + strconv.Itoa(rn.Port),
         Password: "", // no password set
         DB:       0,  // use default DB
     })
@@ -35,26 +35,38 @@ func(re *Node) SlaveOf(host string, port string) (error) {
     return nil
 }
 
-
-func(re *Node) SetRole(role string, master *Node) (error) {
+func(rn *Node) SetRole(role string, master *Node) (error) {
 	switch role {
 	case "MASTER":
-		re.Role = "MASTER"
-		err := re.SlaveOf("NO", "ONE")
+		rn.Role = "MASTER"
+		err := rn.SlaveOf("NO", "ONE")
 		if err != nil {
 			return err
 		}
 	case "SLAVE":
+		if rn.Is(master) {
+			rn.Role = "MASTER"
+			return errors.New("I can't be slave of myself...")
+		}
 		if master != nil {
-			err := re.SlaveOf(master.Host, strconv.Itoa(master.Port))
+			err := rn.SlaveOf(master.Host, strconv.Itoa(master.Port))
 			if err != nil {
 				return err
 			}
-			re.Role = "SLAVE"
+			rn.Role = "SLAVE"
 		}else{
 			return errors.New("Master is empty!")
 		}
 	default:
+		return errors.New("Role Unknown")
 	}
-    return nil
+	return nil
+}
+
+func(rn *Node) Is(n *Node) (bool) {
+	if rn.Host == n.Host && rn.Port == n.Port {
+		return true
+	}else{
+		return false
+	}
 }

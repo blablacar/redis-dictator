@@ -189,7 +189,7 @@ func(ze *Elector) NewElection()(error){
         }else{
         	master, err := ze.GetMasterNode()
         	if err != nil {
-				log.Warn("Unable to get the master infos...")
+				log.Warn("Unable to get master infos...")
 				return errors.New("Election Failed!")
         	}
         	err = ze.Node.SetRole("SLAVE", master)
