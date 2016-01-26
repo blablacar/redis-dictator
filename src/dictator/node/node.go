@@ -35,6 +35,14 @@ func(rn *Node) SlaveOf(host string, port string) (error) {
     return nil
 }
 
+func(rn *Node) Is(n *Node) (bool) {
+	if rn.Host == n.Host && rn.Port == n.Port {
+		return true
+	}else{
+		return false
+	}
+}
+
 func(rn *Node) SetRole(role string, master *Node) (error) {
 	switch role {
 	case "MASTER":
@@ -44,7 +52,7 @@ func(rn *Node) SetRole(role string, master *Node) (error) {
 			return err
 		}
 	case "SLAVE":
-		if rn.Is(master) {
+		if rn.Is(master) {
 			rn.Role = "MASTER"
 			return errors.New("I can't be slave of myself...")
 		}
@@ -61,12 +69,4 @@ func(rn *Node) SetRole(role string, master *Node) (error) {
 		return errors.New("Role Unknown")
 	}
 	return nil
-}
-
-func(rn *Node) Is(n *Node) (bool) {
-	if rn.Host == n.Host && rn.Port == n.Port {
-		return true
-	}else{
-		return false
-	}
 }
