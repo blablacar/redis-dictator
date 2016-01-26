@@ -1,7 +1,7 @@
 package node
 
 import (
-	"github.com/go-redis/redis"
+	"gopkg.in/redis.v3"
 	"strconv"
 	"errors"
 )
