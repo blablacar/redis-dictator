@@ -5,11 +5,6 @@ import (
 	"io/ioutil"
 )
 
-type ElectorConfiguration struct {
-	ZKHosts []string `json:"zk_hosts"`
-	CheckInterval int `json:"check_interval"`
-}
-
 type NodeConfiguration struct {
 	Name string `json:"name"`
 	Host string `json:"host"`
@@ -19,7 +14,7 @@ type NodeConfiguration struct {
 type DictatorConfiguration struct {
 	ServiceName string `json:"svc_name"`
 	LogLevel string `json:"log_level"`
-	Elector ElectorConfiguration `json:"elector"`
+	ZKHosts []string `json:"zk_hosts"`
 	Node NodeConfiguration `json:"node"`
 }
 

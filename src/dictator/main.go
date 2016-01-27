@@ -40,7 +40,7 @@ func initFlags() (string, string) {
 	// The Log Level, from the Sirupsen/logrus level
 	var logLevel = flag.String("log-level", "INFO", "A value to choose between [DEBUG INFO WARN FATAL], can be overriden by config file")
 	// The configuration filename
-	var configurationFileName = flag.String("config", "./dictator.json.conf", "the complete filename of the configuration file")
+	var configurationFileName = flag.String("config", "/etc/dictator/dictator.conf", "the complete filename of the configuration file")
 	// The version flag
 	var version = flag.Bool("version", false, "Display version and exit")
 	// Parse all command line options

@@ -17,19 +17,17 @@ type Elector struct {
 	ZKPathElection string
 	ZKPathService string
 	ZKPathMaster string
-	CheckInterval int
 	MyToken string
 	ZKEvent <-chan zk.Event
 	Node *Node
 }
 
-func(ze *Elector) Initialize(ZKHosts []string, serviceName string, CheckInterval int, Node *Node) (error) {
+func(ze *Elector) Initialize(ZKHosts []string, serviceName string, Node *Node) (error) {
 	ze.ZKPathElection = "/elections/redis/" + serviceName
 	ze.ZKPathService = "/services/redis/" + serviceName
 	ze.ZKPathMaster = "/services/redis/" + serviceName + "/master"
 	ze.ZKConnection = nil
 	ze.ZKHosts = ZKHosts
-	ze.CheckInterval = CheckInterval
 	ze.Node = Node
 	ze.MyToken = ""
 	return nil

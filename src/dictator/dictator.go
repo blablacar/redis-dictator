@@ -16,7 +16,7 @@ func Run(conf DictatorConfiguration, stop <-chan bool, finished chan<-bool) {
 	}
 
 	var ze Elector // Create a ZK Elector
-	err = ze.Initialize(conf.Elector.ZKHosts, conf.ServiceName, conf.Elector.CheckInterval, &re)
+	err = ze.Initialize(conf.ZKHosts, conf.ServiceName, &re)
 	if err != nil {
 		log.Warn("Fail to initialize ZK Elector")
 		finished <- true
