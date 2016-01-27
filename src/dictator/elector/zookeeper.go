@@ -19,23 +19,23 @@ func(ze *Elector) ZKConnect() (zk.State, error) {
 		switch state {
 			case zk.StateUnknown,zk.StateConnectedReadOnly,zk.StateExpired,zk.StateAuthFailed,zk.StateConnecting: {
 				//Disconnect, and let Reconnection happen
-				log.Info("Zookeeper Connection is in BAD State [",state,"] Reconnect")
+				log.Warn("Zookeeper connection is in BAD State [",state,"] reconnect")
 				ze.ZKConnection.Close()
 			}
 			case zk.StateConnected, zk.StateHasSession: {
-				log.Debug("Zookeeper Connection connected(",state,"), nothing to do.")
+				log.Debug("Zookeeper connection connected(",state,"), nothing to do.")
 
 				return state, nil
 			}
 			case zk.StateDisconnected: {
-				log.Info("Reporter Connection is Disconnected -> Reconnection")
+				log.Warn("Reporter connection is Disconnected -> Reconnection")
 			}
 		}
 	}
-	conn, _, err := zk.Connect(ze.ZKHosts, 10 * time.Second)
+	conn, ev, err := zk.Connect(ze.ZKHosts, 10 * time.Second)
 	if err != nil {
 		ze.ZKConnection = nil
-		log.Info("Unable to Connect to ZooKeeper (",err,")")
+		log.Warn("Unable to connect to ZooKeeper (",err,")")
 		return zk.StateDisconnected, err
 	}
 
@@ -46,6 +46,7 @@ func(ze *Elector) ZKConnect() (zk.State, error) {
 
 	state := ze.ZKConnection.State()
 
+	ze.ZKEvent = ev
 	return state, nil
 }
 

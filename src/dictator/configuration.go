@@ -23,7 +23,7 @@ type DictatorConfiguration struct {
 	Node NodeConfiguration `json:"node"`
 }
 
-// Open Nerve configuration file, and parse it's JSON content
+// Open Dictator configuration file, and parse it's JSON content
 // return a full configuration object and an error
 // if the error is different of nil, then the configuration object is empty
 // if error is equal to nil, all the JSON content of the configuration file is loaded into the object

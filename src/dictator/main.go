@@ -21,12 +21,12 @@ func manageSignal(c <-chan os.Signal, stop chan<-bool) {
 		select {
 		case _signal := <-c:
 			if _signal == os.Kill {
-				log.Debug("Dictator: Kill Signal Received")
+				log.Debug("Kill Signal Received")
 			}
 			if _signal == os.Interrupt {
-				log.Debug("Dictator: Interrupt Signal Received")
+				log.Debug("Interrupt Signal Received")
 			}
-			log.Debug("Dictator: Shutdown Signal Received")
+			log.Debug("Shutdown Signal Received")
 			stop <- true
 			break
 		default:
@@ -93,7 +93,7 @@ func main() {
 	logLevel, configurationFileName := initFlags()
 
 	setLogLevel(logLevel)
-	log.Info("Dictator: Starting")
+	log.Info("Starting")
     
 	// Load the configuration from config file. If something wrong, the full process is stopped inside the function
 	dictatorConfiguration := initConfiguration(configurationFileName)
@@ -105,22 +105,22 @@ func main() {
 
 	c := make(chan os.Signal,1)
 	signal.Notify(c, os.Interrupt, os.Kill)
-	log.Debug("Dictator: Signal Channel notification setup done")
+	log.Debug("Signal channel notification setup done")
 
 	stop := make(chan bool)
 	go manageSignal(c,stop)
-	log.Debug("Dictator: Signal Management Started")
+	log.Debug("Signal management started")
 
     finished:= make(chan bool)
 	go Run(dictatorConfiguration, stop,finished)
-	log.Debug("Dictator: Go routine launched")
+	log.Debug("Go routine launched")
 
-	log.Debug("Dictator: Waiting for main process to Stop")
+	log.Debug("Waiting for main process to Stop")
 	isFinished := <-finished
 	if (isFinished) {
-		log.Debug("Nerve: Main routine closed correctly")
+		log.Debug("Main routine closed correctly")
 	}else {
-		log.Warn("Nerve: Main routine closed incorrectly")
+		log.Warn("Main routine closed incorrectly")
 	}
-	log.Info("Dictator: Shutdown")
+	log.Info("Shutdown")
 }

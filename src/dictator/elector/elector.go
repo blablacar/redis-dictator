@@ -19,6 +19,7 @@ type Elector struct {
 	ZKPathMaster string
 	CheckInterval int
 	MyToken string
+	ZKEvent <-chan zk.Event
 	Node *Node
 }
 
@@ -39,13 +40,12 @@ func(ze *Elector) Run(){
 		//Test Connection to ZooKeeper
 		state, err := ze.ZKConnect() //internally the connection is maintained
 		if err != nil {
-			log.Warn("Unable to Report... Connection to Zookeeper Fail")
-		    panic(err)
+			log.Warn("Connection to Zookeeper Fail")
 		}
 		if state == zk.StateHasSession {
-			masterExists, _, err := ze.ZKConnection.Exists(ze.ZKPathMaster)
+			masterExists, _, events, err := ze.ZKConnection.ExistsW(ze.ZKPathMaster)
 			if err != nil {
-				log.Warn("Unable to watch Master key.")
+				log.Warn("Unable to watch master key.")
 			}else{
 				if masterExists{
 					if ze.Node.Role == "UNKNOWN" {
@@ -60,7 +60,7 @@ func(ze *Elector) Run(){
 		        				log.Info("I'm slave")
 		        			}
 		        		}
-					}
+					}	
 				}else{
 					log.Info("There is no master...")
 					err := ze.NewElection()
@@ -70,11 +70,21 @@ func(ze *Elector) Run(){
 						ze.Node.Role = "UNKNOWN"
 					}
 				}
-				time.Sleep(time.Millisecond * time.Duration(ze.CheckInterval))
+				// We can now watch the master key
+				select{
+					case ev := <-events:
+						if ev.Err != nil{
+							log.Warn("Error with Zookeeper: ", ev.Err)
+						}
+					case ev := <-ze.ZKEvent:
+						if ev.Err != nil{
+							log.Warn("Error with Zookeeper: ", ev.Err)
+						}
+					break
+				}
 			}
 		}
-		// Waiting less time when something is going wrong
-		time.Sleep(time.Millisecond * 100)
+		time.Sleep(time.Millisecond * 200)
 	}
 }
 
@@ -144,7 +154,7 @@ func(ze *Elector) ElectionCleanMyToken()(error){
 }
 
 func(ze *Elector) NewElection()(error){
-	log.Info("Starting a New Election.")
+	log.Info("Starting a new election.")
 	// Clean my token - Should not be necessary
 	// Usefull if someone manually delete the master node during while dictator is running
 	err := ze.ElectionCleanMyToken()
@@ -159,7 +169,7 @@ func(ze *Elector) NewElection()(error){
 	}
 	members, err := ze.ElectionGetMembers()
 	if err != nil {
-		log.Warn("Unable to get Elections Members...")
+		log.Warn("Unable to get election members...")
 		return errors.New("Election Failed!")
 	}
 	if members != nil {
@@ -182,7 +192,7 @@ func(ze *Elector) NewElection()(error){
         		log.Warn("Unable to change node role to MASTER...")
 				err := ze.ZKConnection.Delete(ze.ZKPathMaster, -1)
 				if err == nil {
-					log.Warn("Clean the ZK node master to be consistent.")
+					log.Warn("Clean the Zookeeper node master to be consistent.")
 				}
         		return errors.New("Election Failed!")
         	}

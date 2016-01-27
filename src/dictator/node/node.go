@@ -22,7 +22,7 @@ func(rn *Node) Initialize(Name string, Host string, Port int) (error) {
 }
 
 func(rn *Node) SlaveOf(host string, port string) (error) {
-	 client := redis.NewClient(&redis.Options{
+	client := redis.NewClient(&redis.Options{
         Addr:     rn.Host + ":" + strconv.Itoa(rn.Port),
         Password: "", // no password set
         DB:       0,  // use default DB
@@ -70,3 +70,4 @@ func(rn *Node) SetRole(role string, master *Node) (error) {
 	}
 	return nil
 }
+
