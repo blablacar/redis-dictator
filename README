@@ -47,7 +47,7 @@ The Dictator configuration is a JSON file located at `/etc/dictator/dictator.con
     {
 		"svc_name" : "default",
 		"log_level" : "INFO",
-		"zk_hosts": ["127.0.0.1"]
+		"zk_hosts": ["127.0.0.1"],
 		"node" : {
 			"name" : "local",
 			"host" : "127.0.0.1",
