@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"io/ioutil"
+	"k8s.io/kubernetes/Godeps/_workspace/src/github.com/Sirupsen/logrus"
 )
 
 type NodeConfiguration struct {
@@ -13,31 +14,40 @@ type NodeConfiguration struct {
 
 type DictatorConfiguration struct {
 	ServiceName string `json:"svc_name"`
-	LogLevel string `json:"log_level"`
-	ZKHosts []string `json:"zk_hosts"`
-	Node NodeConfiguration `json:"node"`
+	LogLevel    string `json:"log_level"`
+	ZKHosts     []string `json:"zk_hosts"`
+	Node        NodeConfiguration `json:"node"`
 }
 
-// Open Dictator configuration file, and parse it's JSON content
-// return a full configuration object and an error
-// if the error is different of nil, then the configuration object is empty
-// if error is equal to nil, all the JSON content of the configuration file is loaded into the object
-func OpenConfiguration(fileName string) (DictatorConfiguration, error) {
-	var dictatorConfiguration DictatorConfiguration
+func NewDictatorConfiguration() DictatorConfiguration {
+	logrus.Debug("Initialize configuration")
 
-	// Open and read the configuration file
-	file, err := ioutil.ReadFile(fileName)
+	return DictatorConfiguration{
+		ServiceName:"local",
+		LogLevel: "INFO",
+		ZKHosts: []string{"localhost:2181"},
+		Node: NodeConfiguration{
+			Name: "local",
+			Host:"localhost",
+			Port: 6379,
+		},
+	}
+}
+
+func (d *DictatorConfiguration) ReadConfigurationFile(configFilePath string) error {
+	if configFilePath == "" {
+		return nil
+	}
+	logrus.WithField("file", configFilePath).Debug("Reading configuration file")
+
+	file, err := ioutil.ReadFile(configFilePath)
 	if err != nil {
-		// If there is an error with opening or reading the configuration file, return the error, and an empty configuration object
-		return dictatorConfiguration, err
+		return err
 	}
 
-	// Trying to convert the content of the configuration file (theoriticaly in JSON) into a configuration object
-	err = json.Unmarshal(file, &dictatorConfiguration)
+	err = json.Unmarshal(file, d)
 	if err != nil {
-		// If there is an error in decoding the JSON entry into configuration object, return a partialy unmarshalled object, and the error
-		return dictatorConfiguration, err
+		return err
 	}
-
-	return dictatorConfiguration, nil
+	return nil
 }

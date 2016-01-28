@@ -7,6 +7,7 @@ import (
 	"time"
 	"os/signal"
 	"fmt"
+	"strings"
 )
 
 var (
@@ -16,8 +17,8 @@ var (
 
 // Manage OS Signal, only for shutdown purpose
 // When termination signal is received, we send a message to a chan
-func manageSignal(c <-chan os.Signal, stop chan<-bool) {
-    for {
+func manageSignal(c <-chan os.Signal, stop chan <-bool) {
+	for {
 		select {
 		case _signal := <-c:
 			if _signal == os.Kill {
@@ -38,9 +39,9 @@ func manageSignal(c <-chan os.Signal, stop chan<-bool) {
 // All the command line arguments are managed inside this function
 func initFlags() (string, string) {
 	// The Log Level, from the Sirupsen/logrus level
-	var logLevel = flag.String("log-level", "INFO", "A value to choose between [DEBUG INFO WARN FATAL], can be overriden by config file")
+	var logLevel = flag.String("log-level", "", "A value to choose between [DEBUG INFO WARN FATAL], can be overriden by config file")
 	// The configuration filename
-	var configurationFileName = flag.String("config", "/etc/dictator/dictator.conf", "the complete filename of the configuration file")
+	var configurationFileName = flag.String("config", "", "the complete filename of the configuration file")
 	// The version flag
 	var version = flag.Bool("version", false, "Display version and exit")
 	// Parse all command line options
@@ -52,67 +53,58 @@ func initFlags() (string, string) {
 	return *logLevel, *configurationFileName
 }
 
-// Set the Logrus global log level
-// Converted from a configuration string
 func setLogLevel(logLevel string) {
-	// Set the Log Level, extracted from the command line
-	switch logLevel {
-	case "DEBUG":
-		log.SetLevel(log.DebugLevel)
-	case "INFO":
-		log.SetLevel(log.InfoLevel)
-	case "FATAL":
-		log.SetLevel(log.FatalLevel)
-	default:
-		log.SetLevel(log.WarnLevel)
+	lvl, err := log.ParseLevel(strings.ToLower(logLevel))
+	if err != nil {
+		log.WithField("level", logLevel).Fatal("Invalid log level")
 	}
+	log.SetLevel(lvl)
 }
 
 func printVersion() {
 	fmt.Println("Dictator")
-	fmt.Println("Version :",Version)
-	fmt.Println("Build Time :",BuildTime)
+	fmt.Println("Version :", Version)
+	fmt.Println("Build Time :", BuildTime)
 }
 
-func initConfiguration(configurationFileName string) (DictatorConfiguration) {
-	log.Debug("Starting config file parsing")
-	dictatorConfiguration , err := OpenConfiguration(configurationFileName)
+func initConfiguration(configFilePath string) (DictatorConfiguration) {
+	dictatorConfig := NewDictatorConfiguration()
+	err := dictatorConfig.ReadConfigurationFile(configFilePath)
 	if err != nil {
-		// If an error is raised when parsing configuration file
-		// the configuration object can be either empty, either incomplete
-		log.Fatal("Unable to load Configuration (",err,")")
-		// So the configuration is incomplete, exit the program now
-		os.Exit(1)
+		log.WithError(err).Fatal("Unable to load Configuration")
 	}
-	log.Debug("Config file parsed")
-	return dictatorConfiguration
+	return dictatorConfig
 }
 
 func main() {
-	// Init flags, to get logLevel and configuration file name
-	logLevel, configurationFileName := initFlags()
-
-	setLogLevel(logLevel)
 	log.Info("Starting")
-    
+
+	// Init flags, to get logLevel and configuration file name
+	cliLogLevel, configFilePath := initFlags()
+
 	// Load the configuration from config file. If something wrong, the full process is stopped inside the function
-	dictatorConfiguration := initConfiguration(configurationFileName)
+	dictatorConfiguration := initConfiguration(configFilePath)
 
 	// If the log level is setted inside the configuration file, override the command line level
 	if dictatorConfiguration.LogLevel != "" {
 		setLogLevel(dictatorConfiguration.LogLevel)
 	}
 
-	c := make(chan os.Signal,1)
+	if cliLogLevel != "" {
+		setLogLevel(cliLogLevel)
+	}
+
+
+	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, os.Kill)
 	log.Debug("Signal channel notification setup done")
 
 	stop := make(chan bool)
-	go manageSignal(c,stop)
+	go manageSignal(c, stop)
 	log.Debug("Signal management started")
 
-    finished:= make(chan bool)
-	go Run(dictatorConfiguration, stop,finished)
+	finished := make(chan bool)
+	go Run(dictatorConfiguration, stop, finished)
 	log.Debug("Go routine launched")
 
 	log.Debug("Waiting for main process to Stop")
