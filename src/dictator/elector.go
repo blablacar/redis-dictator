@@ -1,11 +1,10 @@
-package elector
+package main
 
 import (
 	log "github.com/Sirupsen/logrus"
 	"time"
 	"github.com/samuel/go-zookeeper/zk"
 	"strconv"
-	. "dictator/node"
 	"strings"
 	"errors"
 	"encoding/json"
@@ -19,18 +18,25 @@ type Elector struct {
 	ZKPathMaster string
 	MyToken string
 	ZKEvent <-chan zk.Event
-	Node *Node
+	Redis *Redis
 }
 
-func(ze *Elector) Initialize(ZKHosts []string, serviceName string, Node *Node) (error) {
+func(ze *Elector) Initialize(ZKHosts []string, serviceName string, Redis *Redis) (error) {
 	ze.ZKPathElection = "/elections/redis/" + serviceName
 	ze.ZKPathService = "/services/redis/" + serviceName
 	ze.ZKPathMaster = "/services/redis/" + serviceName + "/master"
 	ze.ZKConnection = nil
 	ze.ZKHosts = ZKHosts
-	ze.Node = Node
+	ze.Redis = Redis
 	ze.MyToken = ""
 	return nil
+}
+
+
+type ZKDebugLogger struct {}
+
+func(ZKDebugLogger) Printf(format string, a ...interface{}) {
+	log.Debug(format, a)
 }
 
 func(ze *Elector) Run(){
@@ -46,12 +52,12 @@ func(ze *Elector) Run(){
 				log.Warn("Unable to watch master key.")
 			}else{
 				if masterExists{
-					if ze.Node.Role == "UNKNOWN" {
+					if ze.Redis.Role == "UNKNOWN" {
 			        	master, err := ze.GetMasterNode()
 			        	if err != nil {
 			        		log.Warn("Unable to get the master infos...")
 			        	}else{
-							err = ze.Node.SetRole("SLAVE", master)
+							err = ze.Redis.SetRole("SLAVE", master)
 				        	if err != nil {
 				        		log.Warn("Unable to change node role.")
 				        	}else{
@@ -65,7 +71,7 @@ func(ze *Elector) Run(){
 					if err != nil {
 						log.Warn(err)
 						// Reset role to force retake position
-						ze.Node.Role = "UNKNOWN"
+						ze.Redis.Role = "UNKNOWN"
 					}
 				}
 				// We can now watch the master key
@@ -100,7 +106,7 @@ func(ze *Elector) ElectionGetMembers()([]int, error){
 }
 
 
-func(ze *Elector) GetMasterNode()(*Node, error){
+func(ze *Elector) GetMasterNode()(*Redis, error){
 	master_json, _, err := ze.ZKConnection.Get(ze.ZKPathMaster)
 	if err != nil {
 		return nil, err
@@ -110,7 +116,7 @@ func(ze *Elector) GetMasterNode()(*Node, error){
 	if err != nil {
         return nil, err
     }
-    var master Node
+    var master Redis
     master.Name = master_map["name"]
     master.Host = master_map["host"]
     _port, _ := strconv.Atoi(master_map["port"])
@@ -185,7 +191,7 @@ func(ze *Elector) NewElection()(error){
         		log.Warn("Unable to persist master infos...")
         		return errors.New("Election Failed!")
         	}
-        	err = ze.Node.SetRole("MASTER", nil)
+        	err = ze.Redis.SetRole("MASTER", nil)
         	if err != nil {
         		log.Warn("Unable to change node role to MASTER...")
 				err := ze.ZKConnection.Delete(ze.ZKPathMaster, -1)
@@ -200,7 +206,7 @@ func(ze *Elector) NewElection()(error){
 				log.Warn("Unable to get master infos...")
 				return errors.New("Election Failed!")
         	}
-        	err = ze.Node.SetRole("SLAVE", master)
+        	err = ze.Redis.SetRole("SLAVE", master)
         	if err != nil {
         		log.Warn("Unable to change node role to SLAVE...")
         		return errors.New("Election Failed!")
@@ -214,7 +220,7 @@ func(ze *Elector) NewElection()(error){
 }
 
 func(ze *Elector) PersistMasterInfo()(error){
-	jdata := "{\"host\": \"" + ze.Node.Host + "\", \"port\": \"" + strconv.Itoa(ze.Node.Port) + "\", \"name\": \"" + ze.Node.Name + "\"}"
+	jdata := "{\"host\": \"" + ze.Redis.Host + "\", \"port\": \"" + strconv.Itoa(ze.Redis.Port) + "\", \"name\": \"" + ze.Redis.Name + "\"}"
 	err := ze.ZKCreatePath(ze.ZKPathService)
 	if err != nil {
 		return err
@@ -222,6 +228,73 @@ func(ze *Elector) PersistMasterInfo()(error){
 	_, err = ze.ZKCreateNode(ze.ZKPathService + "/master", jdata, 1)
 	if err != nil {
 		return err
+	}
+	return nil
+}
+
+
+
+func(ze *Elector) ZKConnect() (zk.State, error) {
+	if ze.ZKConnection != nil {
+		state := ze.ZKConnection.State()
+		switch state {
+			case zk.StateUnknown,zk.StateConnectedReadOnly,zk.StateExpired,zk.StateAuthFailed,zk.StateConnecting: {
+				//Disconnect, and let Reconnection happen
+				log.Warn("Zookeeper connection is in BAD State [",state,"] reconnect")
+				ze.ZKConnection.Close()
+			}
+			case zk.StateConnected, zk.StateHasSession: {
+				log.Debug("Zookeeper connection connected(",state,"), nothing to do.")
+
+				return state, nil
+			}
+			case zk.StateDisconnected: {
+				log.Warn("Reporter connection is Disconnected -> Reconnection")
+			}
+		}
+	}
+	conn, ev, err := zk.Connect(ze.ZKHosts, 10 * time.Second)
+	if err != nil {
+		ze.ZKConnection = nil
+		log.Warn("Unable to connect to ZooKeeper (",err,")")
+		return zk.StateDisconnected, err
+	}
+
+	ze.ZKConnection = conn
+
+	var zkLogger ZKDebugLogger
+	ze.ZKConnection.SetLogger(zkLogger)
+
+	state := ze.ZKConnection.State()
+
+	ze.ZKEvent = ev
+	return state, nil
+}
+
+func(ze *Elector) ZKCreateNode(path string, data string, flag int32)(string, error){
+	p, err := ze.ZKConnection.Create(path, []byte(data), flag, zk.WorldACL(zk.PermAll))
+	return p, err
+}
+
+func(ze *Elector) ZKCreatePath(path string) error {
+	paths := strings.Split(path, "/")
+	full := ""
+	for i, node := range paths {
+		if i > 0 {
+			full +=  "/"
+		}
+		full += node
+		exists, _, err := ze.ZKConnection.Exists(full)
+		if err != nil {
+			return err
+		}
+		if exists {
+			continue
+		}
+		_, err = ze.ZKConnection.Create(full, []byte(""), int32(0), zk.WorldACL(zk.PermAll))
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }

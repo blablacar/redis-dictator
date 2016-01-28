@@ -1,4 +1,4 @@
-package node
+package main
 
 import (
 	"gopkg.in/redis.v3"
@@ -6,14 +6,14 @@ import (
 	"errors"
 )
 
-type Node struct {
+type Redis struct {
 	Name string
 	Host string
 	Port int
 	Role string
 }
 
-func(rn *Node) Initialize(Name string, Host string, Port int) (error) {
+func(rn *Redis) Initialize(Name string, Host string, Port int) (error) {
 	rn.Name = Name
 	rn.Host = Host
 	rn.Port = Port
@@ -21,7 +21,7 @@ func(rn *Node) Initialize(Name string, Host string, Port int) (error) {
 	return nil
 }
 
-func(rn *Node) SlaveOf(host string, port string) (error) {
+func(rn *Redis) SlaveOf(host string, port string) (error) {
 	client := redis.NewClient(&redis.Options{
         Addr:     rn.Host + ":" + strconv.Itoa(rn.Port),
         Password: "", // no password set
@@ -35,7 +35,7 @@ func(rn *Node) SlaveOf(host string, port string) (error) {
     return nil
 }
 
-func(rn *Node) Is(n *Node) (bool) {
+func(rn *Redis) Is(n *Redis) (bool) {
 	if rn.Host == n.Host && rn.Port == n.Port {
 		return true
 	}else{
@@ -43,7 +43,7 @@ func(rn *Node) Is(n *Node) (bool) {
 	}
 }
 
-func(rn *Node) SetRole(role string, master *Node) (error) {
+func(rn *Redis) SetRole(role string, master *Redis) (error) {
 	switch role {
 	case "MASTER":
 		rn.Role = "MASTER"

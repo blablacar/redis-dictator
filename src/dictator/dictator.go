@@ -3,12 +3,10 @@ package main
 import (
 	log "github.com/Sirupsen/logrus"
 	"time"
-	. "dictator/node"
-	. "dictator/elector"
 )
 
 func Run(conf DictatorConfiguration, stop <-chan bool, finished chan<-bool) {
-	var re Node // Create a Redis Node
+	var re Redis // Create a Redis Node
 	err := re.Initialize(conf.Node.Name, conf.Node.Host, conf.Node.Port)
 	if err != nil {
 		log.Warn("Fail to initialize Redis node")
