@@ -12,7 +12,8 @@ import (
 
 var (
 	Version = "No Version Defined"
-	BuildTime = "1970-01-01_00:00:00_UTC"
+	BuildTime = "1970-01-01 00:00:00 (UTC)"
+	GitRevision  = "No Git Rev Defined"
 )
 
 // Manage OS Signal, only for shutdown purpose
@@ -62,9 +63,9 @@ func setLogLevel(logLevel string) {
 }
 
 func printVersion() {
-	fmt.Println("Dictator")
 	fmt.Println("Version :", Version)
 	fmt.Println("Build Time :", BuildTime)
+	fmt.Println("Git Revision :", GitRevision)
 }
 
 func initConfiguration(configFilePath string) (DictatorConfiguration) {
@@ -77,8 +78,6 @@ func initConfiguration(configFilePath string) (DictatorConfiguration) {
 }
 
 func main() {
-	log.Info("Starting")
-
 	// Init flags, to get logLevel and configuration file name
 	cliLogLevel, configFilePath := initFlags()
 
@@ -94,6 +93,7 @@ func main() {
 		setLogLevel(cliLogLevel)
 	}
 
+	log.Info("Starting")
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, os.Kill)
