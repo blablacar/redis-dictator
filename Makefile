@@ -23,3 +23,4 @@ install:
 	mkdir -p /etc/dictator
 	cp example/dictator.json.conf /etc/dictator/dictator.conf
 	cp bin/dictator /usr/local/bin/dictator
+	chmod 755 /usr/local/bin/dictator
