@@ -57,7 +57,7 @@ The Dictator configuration is a JSON file located at `/etc/dictator/dictator.con
 
 The main section is composed by:
  
-- `svc_name`(required): The Service/Cluster Name
+- `svc_name`: The Service/Cluster Name (default is `local`)
 - `log_level`: The log level `DEBUG`, `INFO`, `WARN`, `FATAL` (default is `INFO`)
 - `zk_hosts`: An array of strings of Zookeeper nodes (default is `localhost:2181`)
 - `node`: The Redis node info (detailed bellow)

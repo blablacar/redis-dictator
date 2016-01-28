@@ -1,9 +1,9 @@
 package main
 
 import (
+	log "github.com/Sirupsen/logrus"
 	"encoding/json"
 	"io/ioutil"
-	"k8s.io/kubernetes/Godeps/_workspace/src/github.com/Sirupsen/logrus"
 )
 
 type NodeConfiguration struct {
@@ -20,10 +20,9 @@ type DictatorConfiguration struct {
 }
 
 func NewDictatorConfiguration() DictatorConfiguration {
-	logrus.Debug("Initialize configuration")
+	log.Debug("Initialize configuration")
 
 	return DictatorConfiguration{
-		ServiceName:"local",
 		LogLevel: "INFO",
 		ZKHosts: []string{"localhost:2181"},
 		Node: NodeConfiguration{
@@ -38,7 +37,7 @@ func (d *DictatorConfiguration) ReadConfigurationFile(configFilePath string) err
 	if configFilePath == "" {
 		return nil
 	}
-	logrus.WithField("file", configFilePath).Debug("Reading configuration file")
+	log.WithField("file", configFilePath).Debug("Reading configuration file")
 
 	file, err := ioutil.ReadFile(configFilePath)
 	if err != nil {
@@ -49,5 +48,7 @@ func (d *DictatorConfiguration) ReadConfigurationFile(configFilePath string) err
 	if err != nil {
 		return err
 	}
+
+
 	return nil
 }
