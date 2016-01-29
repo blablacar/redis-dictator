@@ -17,7 +17,7 @@ Basically, our use cases involved that we should provide a "quite" high availabl
 ## Motivation
 We spent lot of time/energy to test some HA & Cluster solutions arround Redis. We put aside the idea of clusterize Redis (in term of turnkey sharding solution), it complexify your topologies and reduce drastically your consistency...We choosed to shard our dataset functionally by creating several master/slaves clusters instead of one magical auto-sharding, auto-scaling, auto-[...]ing black box.
 
-We are not the first to develop tooling to manipulate master/slaves toplologies. The most known is surely [Redis Sentinel](http://redis.io/topics/sentinel) but the configuration file rewriting bother us a little (note that we are in a full containers context at BlaBlaCar).  We should admit that our main motivation is certainly because developping your own tool is fun and offers a lot of advantages, the solution fits perfectly to your needs, you can chose the language, merge PRs quickly...
+We are not the first to develop tooling to manipulate master/slaves toplologies. The most known is surely [Redis Sentinel](http://redis.io/topics/sentinel) but the configuration file rewriting bother us a little (note that we are in a full containers context at BlaBlaCar).  By the way, we should admit that our main motivation is certainly because developping your own tool is fun and offers a lot of advantages, the solution fits perfectly to your needs, you can chose the language, merge PRs quickly...
 
 ## Building from source
 Make sure to have a go 1.4 or higher:
