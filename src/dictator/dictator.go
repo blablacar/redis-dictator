@@ -39,5 +39,7 @@ func Run(conf DictatorConfiguration, stop <-chan bool, finished chan<-bool) {
 		}
 	}
 
+	ze.Destroy()
+
 	finished <- true
 }

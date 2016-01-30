@@ -34,6 +34,15 @@ func(ze *Elector) Initialize(ZKHosts []string, serviceName string, Redis *Redis)
 	return nil
 }
 
+func(ze *Elector) Destroy(){
+	log.Debug("Deleting master node from Zookeeper.")
+	err := ze.ZKConnection.Delete(ze.ZKPathMaster, -1)
+	if err != nil {
+		log.Warn("Unable to delete master node from Zookeeper.")
+	}
+	ze.ZKConnection.Close()
+}
+
 
 type ZKDebugLogger struct {}
 
@@ -51,7 +60,7 @@ func(ze *Elector) Run(){
 		if state == zk.StateHasSession {
 			masterExists, _, events, err := ze.ZKConnection.ExistsW(ze.ZKPathMaster)
 			if err != nil {
-				log.Warn("Unable to watch master key.")
+				log.Warn("Unable to watch master node.")
 			}else{
 				if masterExists{
 					if ze.Redis.Role == "UNKNOWN" {
@@ -172,7 +181,7 @@ func(ze *Elector) NewElection()(error){
 	log.Info("Starting a new election.")
 
 	// Apply time penalty
-	if ze.Penalty != 0 {
+	if ze.Penalty != 0 && ze.Redis.Role != "UNKNOWN" {
 		log.Debug("Got 1s penalty, I should wait...")
 		time.Sleep(time.Second)
 	}
