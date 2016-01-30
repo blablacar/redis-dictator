@@ -17,6 +17,8 @@ type Elector struct {
 	ZKPathService string
 	ZKPathMaster string
 	MyToken string
+	MyPosition int
+	Penalty int
 	ZKEvent <-chan zk.Event
 	Redis *Redis
 }
@@ -28,7 +30,7 @@ func(ze *Elector) Initialize(ZKHosts []string, serviceName string, Redis *Redis)
 	ze.ZKConnection = nil
 	ze.ZKHosts = ZKHosts
 	ze.Redis = Redis
-	ze.MyToken = ""
+	ze.Penalty = 100
 	return nil
 }
 
@@ -77,10 +79,12 @@ func(ze *Elector) Run(){
 				// We can now watch the master key
 				select{
 					case ev := <-events:
+						log.Debug("Event on Master node: ", ev.Type)
 						if ev.Err != nil{
 							log.Warn("Error with Zookeeper: ", ev.Err)
 						}
 					case ev := <-ze.ZKEvent:
+						log.Debug("Event on Zookeeper connection: ", ev.Type)
 						if ev.Err != nil{
 							log.Warn("Error with Zookeeper: ", ev.Err)
 						}
@@ -126,24 +130,31 @@ func(ze *Elector) GetMasterNode()(*Redis, error){
 }
 
 
-func(ze *Elector) ElectionTakePosition()(string, error){
+func(ze *Elector) ElectionTakePosition()(int, string, error){
 	// Create Elections Path if doesn't not exists
 	err := ze.ZKCreatePath(ze.ZKPathElection)
 	if err != nil { // Maybe another node has created the path in the same time, test it before raise error
 		exists, _, _ := ze.ZKConnection.Exists(ze.ZKPathElection)
 		if !exists {
-			return "", err
+			return 0, "", err
 		}
 	}
 	path, err := ze.ZKCreateNode(ze.ZKPathElection + "/", "", zk.FlagEphemeral|zk.FlagSequence)
 	if err != nil {
-		return "", err
+		return 0, "", err
 	}
 	nodes := strings.Split(path, "/")
 	token := nodes[len(nodes)-1]
+
+	// Convert token to position and apply penalty
+	position, _ := strconv.Atoi(token)
+	// Apply weigth penalty - 0 if previously master, 100 if previously slave
+	position += ze.Penalty
+
 	// Return my token
 	// a zk sequence node (string)
-	return token, nil
+	// a position (int)
+	return position, token, nil
 }
 
 func(ze *Elector) ElectionCleanMyToken()(error){
@@ -159,6 +170,13 @@ func(ze *Elector) ElectionCleanMyToken()(error){
 
 func(ze *Elector) NewElection()(error){
 	log.Info("Starting a new election.")
+
+	// Apply time penalty
+	if ze.Penalty != 0 {
+		log.Debug("Got 1s penalty, I should wait...")
+		time.Sleep(time.Second)
+	}
+
 	// Clean my token - Should not be necessary
 	// Usefull if someone manually delete the master node during while dictator is running
 	err := ze.ElectionCleanMyToken()
@@ -166,7 +184,7 @@ func(ze *Elector) NewElection()(error){
 		log.Warn("Error during token cleanning.")
 		return errors.New("Election Failed!")
 	}
-	ze.MyToken, err = ze.ElectionTakePosition()
+	ze.MyPosition, ze.MyToken, err = ze.ElectionTakePosition()
 	if err != nil {
 		log.Warn("Unable to take position in election...")
 		return errors.New("Election Failed!")
@@ -177,14 +195,21 @@ func(ze *Elector) NewElection()(error){
 		return errors.New("Election Failed!")
 	}
 	if members != nil {
-		master_token := members[0]
-        for _, member_token := range members {
-        	if member_token < master_token {
-            	master_token = member_token
-            }
+		master_position := members[0]
+        master_position += ze.Penalty
+        for _, member_position := range members {
+			member_position += ze.Penalty
+			if member_position < master_position {
+				master_position = member_position
+			}
         }
-        my_token, _ := strconv.Atoi(ze.MyToken)
-        if my_token  == master_token {
+
+        log.WithField("member", members).Debug("Election Info")
+        log.WithField("penalty", ze.Penalty).Debug("Election Info")
+        log.WithField("me", strconv.Itoa(ze.MyPosition)).Debug("Election Info")
+        log.WithField("master", strconv.Itoa(master_position)).Debug("Election Info")
+
+        if ze.MyPosition == master_position {
         	log.Info("I'm Master!")
         	err := ze.PersistMasterInfo()
         	if err != nil {
@@ -200,6 +225,8 @@ func(ze *Elector) NewElection()(error){
 				}
         		return errors.New("Election Failed!")
         	}
+			// Remove the penalty to have more chance to be elected if ZK goes away
+			ze.Penalty = 0
         }else{
         	master, err := ze.GetMasterNode()
         	if err != nil {
@@ -211,6 +238,8 @@ func(ze *Elector) NewElection()(error){
         		log.Warn("Unable to change node role to SLAVE...")
         		return errors.New("Election Failed!")
         	}
+			// Add penalty to have less chance to be elected if ZK goes away
+			ze.Penalty = 100
         }
 	}else{
 		log.Info("There is no member in election...")
@@ -231,8 +260,6 @@ func(ze *Elector) PersistMasterInfo()(error){
 	}
 	return nil
 }
-
-
 
 func(ze *Elector) ZKConnect() (zk.State, error) {
 	if ze.ZKConnection != nil {
