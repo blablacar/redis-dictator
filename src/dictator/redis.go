@@ -25,6 +25,7 @@ func(rn *Redis) Initialize(Name string, Host string, Port int) (error) {
 }
 
 func (rn *Redis) Connect() (error){
+	var err error
     for i := 0; i < 10; i++ {
 		rn.Conn = redis.NewClient(&redis.Options{
 	        Addr:     rn.Host + ":" + strconv.Itoa(rn.Port),
@@ -32,16 +33,16 @@ func (rn *Redis) Connect() (error){
 	        DB:       0,  // use default DB
 	    })
 
-	    err := rn.Conn.Ping().Err()
+	    err = rn.Conn.Ping().Err()
 	    if err != nil {
 			log.WithError(err).Debug("Wait for Redis 3 more seconds...")
 			time.Sleep(time.Second * 3)
-			return err
 		}else{
+			err = nil
 			break
 		}
 	}
-	return nil
+	return err
 }
 
 func(rn *Redis) SlaveOf(host string, port string) (error) {
@@ -52,9 +53,12 @@ func(rn *Redis) SlaveOf(host string, port string) (error) {
 
     slaveOf := rn.Conn.SlaveOf(host, port)
     if slaveOf.Val() != "OK"{
-    	return slaveOf.Err()
+    	err = slaveOf.Err()
     }
-    return nil
+
+    err = rn.Conn.Close()
+
+    return err
 }
 
 func(rn *Redis) Is(n *Redis) (bool) {
