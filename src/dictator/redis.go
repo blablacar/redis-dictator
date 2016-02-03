@@ -13,20 +13,22 @@ type Redis struct {
 	Host string
 	Port int
 	Role string
+	LoadingTimeout int
 	Conn *redis.Client
 }
 
-func(rn *Redis) Initialize(Name string, Host string, Port int) (error) {
+func(rn *Redis) Initialize(Name string, Host string, Port int, LoadingTimeout int) (error) {
 	rn.Name = Name
 	rn.Host = Host
 	rn.Port = Port
+	rn.LoadingTimeout = LoadingTimeout
 	rn.Role = "UNKNOWN"
 	return nil
 }
 
 func (rn *Redis) Connect() (error){
 	var err error
-    for i := 0; i < 30; i++ {
+    for i := 0; i < rn.LoadingTimeout; i++ {
 		rn.Conn = redis.NewClient(&redis.Options{
 	        Addr:     rn.Host + ":" + strconv.Itoa(rn.Port),
 	        Password: "", // no password set

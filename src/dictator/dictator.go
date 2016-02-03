@@ -7,7 +7,7 @@ import (
 
 func Run(conf DictatorConfiguration, stop <-chan bool, finished chan<-bool) {
 	var re Redis // Create a Redis Node
-	err := re.Initialize(conf.Node.Name, conf.Node.Host, conf.Node.Port)
+	err := re.Initialize(conf.Node.Name, conf.Node.Host, conf.Node.Port, conf.Node.LoadingTimeout)
 	if err != nil {
 		log.WithError(err).Warn("Fail to initialize Redis node")
 		finished <- true

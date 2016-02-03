@@ -10,6 +10,7 @@ type NodeConfiguration struct {
 	Name string `json:"name"`
 	Host string `json:"host"`
 	Port int `json:"port"`
+	LoadingTimeout int `json:"loading_timeout"`
 }
 
 type DictatorConfiguration struct {
@@ -27,8 +28,9 @@ func NewDictatorConfiguration() DictatorConfiguration {
 		ZKHosts: []string{"localhost:2181"},
 		Node: NodeConfiguration{
 			Name: "local",
-			Host:"localhost",
+			Host: "localhost",
 			Port: 6379,
+			LoadingTimeout: 30,
 		},
 	}
 }
