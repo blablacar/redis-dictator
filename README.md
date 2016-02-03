@@ -49,7 +49,8 @@ The Dictator configuration is a JSON file located at `/etc/dictator/dictator.con
         "node" : {
             "name" : "local",
             "host" : "127.0.0.1",
-            "port" : 6379
+            "port" : 6379,
+            "loading_timeout" : 30
         } 
     }
 
@@ -65,6 +66,7 @@ The node section is composed by:
 - `name`: The server name, FQDN or "display" name (default is `local`)
 - `host`: The Address of the Redis server (default is `localhost`)
 - `port`: The Port of the Redis server (default is `6379`)
+- `loading_timeout`: The time in second that Dictator accepts to wait during Redis loads its dataset to memory
 
 ## Run
 
