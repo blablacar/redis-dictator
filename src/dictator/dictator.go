@@ -9,14 +9,14 @@ func Run(conf DictatorConfiguration, stop <-chan bool, finished chan<-bool) {
 	var re Redis // Create a Redis Node
 	err := re.Initialize(conf.Node.Name, conf.Node.Host, conf.Node.Port)
 	if err != nil {
-		log.Warn("Fail to initialize Redis node")
+		log.WithError(err).Warn("Fail to initialize Redis node")
 		finished <- true
 	}
 
 	var ze Elector // Create a ZK Elector
 	err = ze.Initialize(conf.ZKHosts, conf.ServiceName, &re)
 	if err != nil {
-		log.Warn("Fail to initialize ZK Elector")
+		log.WithError(err).Warn("Fail to initialize ZK Elector")
 		finished <- true
 	}
 
