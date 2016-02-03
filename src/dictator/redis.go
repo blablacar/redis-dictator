@@ -26,7 +26,7 @@ func(rn *Redis) Initialize(Name string, Host string, Port int) (error) {
 
 func (rn *Redis) Connect() (error){
 	var err error
-    for i := 0; i < 10; i++ {
+    for i := 0; i < 30; i++ {
 		rn.Conn = redis.NewClient(&redis.Options{
 	        Addr:     rn.Host + ":" + strconv.Itoa(rn.Port),
 	        Password: "", // no password set
@@ -35,8 +35,8 @@ func (rn *Redis) Connect() (error){
 
 	    err = rn.Conn.Ping().Err()
 	    if err != nil {
-			log.WithError(err).Debug("Wait for Redis 3 more seconds...")
-			time.Sleep(time.Second * 3)
+			log.WithError(err).Debug("Wait for Redis Server...")
+			time.Sleep(time.Second)
 		}else{
 			err = nil
 			break
