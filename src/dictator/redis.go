@@ -1,9 +1,11 @@
 package main
 
 import (
+	log "github.com/Sirupsen/logrus"
 	"gopkg.in/redis.v3"
 	"strconv"
 	"errors"
+	"time"
 )
 
 type Redis struct {
@@ -11,6 +13,7 @@ type Redis struct {
 	Host string
 	Port int
 	Role string
+	Conn *redis.Client
 }
 
 func(rn *Redis) Initialize(Name string, Host string, Port int) (error) {
@@ -21,14 +24,33 @@ func(rn *Redis) Initialize(Name string, Host string, Port int) (error) {
 	return nil
 }
 
-func(rn *Redis) SlaveOf(host string, port string) (error) {
-	client := redis.NewClient(&redis.Options{
-        Addr:     rn.Host + ":" + strconv.Itoa(rn.Port),
-        Password: "", // no password set
-        DB:       0,  // use default DB
-    })
+func (rn *Redis) Connect() (error){
+    for i := 0; i < 10; i++ {
+		rn.Conn = redis.NewClient(&redis.Options{
+	        Addr:     rn.Host + ":" + strconv.Itoa(rn.Port),
+	        Password: "", // no password set
+	        DB:       0,  // use default DB
+	    })
 
-    slaveOf := client.SlaveOf(host, port)
+	    err := rn.Conn.Ping().Err()
+	    if err != nil {
+			log.WithError(err).Debug("Wait for Redis 3 more seconds...")
+			time.Sleep(time.Second * 3)
+			return err
+		}else{
+			break
+		}
+	}
+	return nil
+}
+
+func(rn *Redis) SlaveOf(host string, port string) (error) {
+	err := rn.Connect()
+	if err != nil {
+    	return errors.New("Can't connect to Redis.")
+    }
+
+    slaveOf := rn.Conn.SlaveOf(host, port)
     if slaveOf.Val() != "OK"{
     	return slaveOf.Err()
     }
