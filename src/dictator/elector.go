@@ -89,6 +89,13 @@ func(ze *Elector) Run(){
 						ze.Redis.Role = "UNKNOWN"
 					}
 				}
+
+				// Election is over, clean our tokens
+				err := ze.ElectionCleanMyToken()
+				if err != nil {
+					log.WithError(err).Warn("Error during token cleanning.")
+				}
+
 				// We can now watch the master key
 				select{
 					case ev := <-events:
