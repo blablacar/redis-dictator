@@ -18,6 +18,7 @@ type DictatorConfiguration struct {
 	LogLevel    string `json:"log_level"`
 	ZKHosts     []string `json:"zk_hosts"`
 	Node        NodeConfiguration `json:"node"`
+	HttpPort 	int `json:"http_port"`
 }
 
 func NewDictatorConfiguration() DictatorConfiguration {
@@ -26,6 +27,7 @@ func NewDictatorConfiguration() DictatorConfiguration {
 	return DictatorConfiguration{
 		LogLevel: "INFO",
 		ZKHosts: []string{"localhost:2181"},
+		HttpPort: 8000,
 		Node: NodeConfiguration{
 			Name: "local",
 			Host: "localhost",
