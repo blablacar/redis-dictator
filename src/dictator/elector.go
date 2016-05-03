@@ -40,9 +40,11 @@ func(ze *Elector) Destroy(){
 	switch ze.ZKConnection.State() {
 		case zk.StateConnected, zk.StateHasSession: {
 			log.Debug("Deleting master node from Zookeeper.")
-			err := ze.ZKConnection.Delete(ze.ZKPathMaster, -1)
-			if err != nil {
-				log.WithError(err).Warn("Unable to delete master node from Zookeeper.")
+			if ze.Redis.Role == "MASTER" {
+				err := ze.ZKConnection.Delete(ze.ZKPathMaster, -1)
+				if err != nil {
+					log.WithError(err).Warn("Unable to delete master node from Zookeeper.")
+				}
 			}
 			ze.ZKConnection.Close()
 			ze.Paused = true
