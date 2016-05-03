@@ -8,8 +8,8 @@ import (
 
 func HTTPEnable(w http.ResponseWriter, r *http.Request, ze *Elector) {
 	if ze.Paused {
-		ze.Paused = false
 		go ze.Run()
+		ze.Paused = false
 		log.Info("Unpause Dictator")
 	}else{
 		log.Warn("Dictator is already enabled")
@@ -18,6 +18,7 @@ func HTTPEnable(w http.ResponseWriter, r *http.Request, ze *Elector) {
 
 func HTTPDisable(w http.ResponseWriter, r *http.Request, ze *Elector) {
 	ze.Destroy()
+	ze.Paused = true
 	log.Info("Pause Dictator")
 }
 
