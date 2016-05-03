@@ -2,8 +2,24 @@ package main
 
 import (
 	log "github.com/Sirupsen/logrus"
-	"time"
+	"strconv"
+	"net/http"
 )
+
+func HTTPEnable(w http.ResponseWriter, r *http.Request, ze *Elector) {
+	if ze.Paused {
+		ze.Paused = false
+		go ze.Run()
+		log.Info("Unpause Dictator")
+	}else{
+		log.Warn("Dictator is already enabled")
+	}
+}
+
+func HTTPDisable(w http.ResponseWriter, r *http.Request, ze *Elector) {
+	ze.Destroy()
+	log.Info("Pause Dictator")
+}
 
 func Run(conf DictatorConfiguration, stop <-chan bool, finished chan<-bool) {
 	var re Redis // Create a Redis Node
@@ -23,6 +39,15 @@ func Run(conf DictatorConfiguration, stop <-chan bool, finished chan<-bool) {
 	// Run Elector
     go ze.Run()
 
+    // http signals management
+    http.HandleFunc("/enable", func(w http.ResponseWriter, r *http.Request) {
+          HTTPEnable(w, r, &ze)
+    })
+    http.HandleFunc("/disable", func(w http.ResponseWriter, r *http.Request) {
+          HTTPDisable(w, r, &ze)
+    })
+	go http.ListenAndServe(":" + strconv.Itoa(conf.HttpPort), nil)
+
 	// Wait for the stop signal
 	Loop:
 	for {
@@ -34,8 +59,6 @@ func Run(conf DictatorConfiguration, stop <-chan bool, finished chan<-bool) {
 				log.Debug("Close Signal Received (but a strange false one)")
 			}
 			break Loop
-		default:
-			time.Sleep(time.Millisecond * 100)
 		}
 	}
 
