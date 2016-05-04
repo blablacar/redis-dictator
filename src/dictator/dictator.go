@@ -17,9 +17,13 @@ func HTTPEnable(w http.ResponseWriter, r *http.Request, ze *Elector) {
 }
 
 func HTTPDisable(w http.ResponseWriter, r *http.Request, ze *Elector) {
-	ze.Destroy()
-	ze.Paused = true
-	log.Info("Pause Dictator")
+	if !ze.Paused {
+		ze.Destroy()
+		ze.Paused = true
+		log.Info("Pause Dictator")
+	}else{
+		log.Warn("Dictator is already paused")
+	}
 }
 
 func Run(conf DictatorConfiguration, stop <-chan bool, finished chan<-bool) {
