@@ -73,7 +73,6 @@ func(ze *Elector) Run(){
 					log.WithError(err).Warn("Unable to watch master node.")
 				}else{
 					if masterExists{
-						log.Info("#### " + ze.Redis.Role)
 						if ze.Redis.Role == "UNKNOWN" {
 				        	master, err := ze.GetMasterNode()
 				        	if err != nil {
