@@ -58,62 +58,65 @@ func(ZKDebugLogger) Printf(format string, a ...interface{}) {
 }
 
 func(ze *Elector) Run(){
-	//Test Connection to ZooKeeper
-	state, err := ze.ZKConnect() //internally the connection is maintained
-	if err != nil {
-		log.WithError(err).Warn("Connection to Zookeeper Fail")
-	}
-	if state == zk.StateHasSession {
-		masterExists, _, events, err := ze.ZKConnection.ExistsW(ze.ZKPathMaster)
+	for{
+		//Test Connection to ZooKeeper
+		state, err := ze.ZKConnect() //internally the connection is maintained
 		if err != nil {
-			log.WithError(err).Warn("Unable to watch master node.")
-		}else{
-			if masterExists{
-				if ze.Redis.Role == "UNKNOWN" {
-		        	master, err := ze.GetMasterNode()
-		        	if err != nil {
-		        		log.WithError(err).Warn("Unable to get the master infos...")
-		        	}else{
-						err = ze.Redis.SetRole("SLAVE", master)
-			        	if err != nil {
-			        		log.WithError(err).Warn("Unable to change node role.")
-			        	}else{
-	        				log.Info("I'm slave")
-	        			}
-	        		}
-				}	
+			log.WithError(err).Warn("Connection to Zookeeper Fail")
+		}
+		if state == zk.StateHasSession {
+			masterExists, _, events, err := ze.ZKConnection.ExistsW(ze.ZKPathMaster)
+			if err != nil {
+				log.WithError(err).Warn("Unable to watch master node.")
 			}else{
-				log.Info("There is no master...")
-				err := ze.NewElection()
+				if masterExists{
+					if ze.Redis.Role == "UNKNOWN" {
+			        	master, err := ze.GetMasterNode()
+			        	if err != nil {
+			        		log.WithError(err).Warn("Unable to get the master infos...")
+			        	}else{
+							err = ze.Redis.SetRole("SLAVE", master)
+				        	if err != nil {
+				        		log.WithError(err).Warn("Unable to change node role.")
+				        	}else{
+		        				log.Info("I'm slave")
+		        			}
+		        		}
+					}	
+				}else{
+					log.Info("There is no master...")
+					err := ze.NewElection()
+					if err != nil {
+						log.Warn(err)
+						// Reset role to force retake position
+						ze.Redis.Role = "UNKNOWN"
+					}
+				}
+	
+				// Election is over, clean our tokens
+				err := ze.ElectionCleanMyToken()
 				if err != nil {
-					log.Warn(err)
-					// Reset role to force retake position
-					ze.Redis.Role = "UNKNOWN"
+					log.WithError(err).Warn("Error during token cleanning.")
+				}
+	
+				// We can now watch the master key
+				select{
+					case ev := <-events:
+						log.Debug("Event on Master node: ", ev.Type)
+						if ev.Err != nil{
+							log.WithError(ev.Err).Warn("Error with Master Node Event")
+						}
+					case ev := <-ze.ZKEvent:
+						log.Debug("Event on Zookeeper connection: ", ev.Type)
+						if ev.Err != nil{
+							log.WithError(ev.Err).Warn("Error with Zookeeper Event")
+						}
+					break
 				}
 			}
-
-			// Election is over, clean our tokens
-			err := ze.ElectionCleanMyToken()
-			if err != nil {
-				log.WithError(err).Warn("Error during token cleanning.")
-			}
-
-			// We can now watch the master key
-			select{
-				case ev := <-events:
-					log.Debug("Event on Master node: ", ev.Type)
-					if ev.Err != nil{
-						log.WithError(ev.Err).Warn("Error with Master Node Event")
-					}
-				case ev := <-ze.ZKEvent:
-					log.Debug("Event on Zookeeper connection: ", ev.Type)
-					if ev.Err != nil{
-						log.WithError(ev.Err).Warn("Error with Zookeeper Event")
-					}
-				break
-			}
 		}
-	}
+		time.Sleep(time.Millisecond * 200)
+  	}
 }
 
 func(ze *Elector) ElectionGetMembers()([]int, error){
