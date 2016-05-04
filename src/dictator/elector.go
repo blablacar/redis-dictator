@@ -46,6 +46,8 @@ func(ze *Elector) Destroy(){
 					log.WithError(err).Warn("Unable to delete master node from Zookeeper.")
 				}
 			}
+			ze.Redis.Role = "UNKNOWN"
+			ze.Penalty = 100
 			ze.ZKConnection.Close()
 		}
 	}
